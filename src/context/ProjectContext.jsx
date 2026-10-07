@@ -6,8 +6,14 @@ const getApiBaseUrl = () => {
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL;
   }
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return `${window.location.origin}/api`;
+  if (typeof window !== 'undefined') {
+    const { protocol, hostname } = window.location;
+    // Local dev or Local LAN IP testing on mobile (e.g., 192.168.x.x, 10.x.x.x, localhost)
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) {
+      return `${protocol}//${hostname}:5000/api`;
+    }
+    // Production deployment online
+    return `${protocol}//${hostname}/api`;
   }
   return 'http://localhost:5000/api';
 };
@@ -194,7 +200,7 @@ export const ProjectProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : DEFAULT_BOOKINGS;
   });
 
-  // Sync live database from backend server across all PCs
+  // Sync live database from backend server across all PCs & Mobile devices
   const syncWithBackend = async () => {
     try {
       const [projRes, catRes, annRes, bookRes, imgRes] = await Promise.all([
@@ -205,30 +211,47 @@ export const ProjectProvider = ({ children }) => {
         fetch(`${API_BASE_URL}/site-images`).then(r => r.json())
       ]);
 
-      if (projRes?.success) setProjects(projRes.projects);
-      if (catRes?.success) setCategories(catRes.categories);
-      if (annRes?.success) setAnnouncements(annRes.announcements);
-      if (bookRes?.success) setCustomerBookings(bookRes.customerBookings);
-      if (imgRes?.success && Object.keys(imgRes.siteImages || {}).length > 0) setSiteImages(imgRes.siteImages);
+      if (projRes?.success && Array.isArray(projRes.projects)) {
+        setProjects(projRes.projects);
+        localStorage.setItem('luxe_projects', JSON.stringify(projRes.projects));
+      }
+      if (catRes?.success && Array.isArray(catRes.categories)) {
+        setCategories(catRes.categories);
+        localStorage.setItem('luxe_categories', JSON.stringify(catRes.categories));
+      }
+      if (annRes?.success && Array.isArray(annRes.announcements)) {
+        setAnnouncements(annRes.announcements);
+        localStorage.setItem('luxe_announcements', JSON.stringify(annRes.announcements));
+      }
+      if (bookRes?.success && Array.isArray(bookRes.customerBookings)) {
+        setCustomerBookings(bookRes.customerBookings);
+        localStorage.setItem('luxe_customer_bookings', JSON.stringify(bookRes.customerBookings));
+      }
+      if (imgRes?.success && Object.keys(imgRes.siteImages || {}).length > 0) {
+        setSiteImages(imgRes.siteImages);
+        localStorage.setItem('luxe_site_images', JSON.stringify(imgRes.siteImages));
+      }
     } catch (err) {
       console.warn('Backend server offline or unreachable. Using cached state.', err);
     }
   };
 
-  // Poll server every 5s & sync on tab focus to guarantee real-time updates on all PCs
+  // Poll server every 3s & sync on tab focus/mobile touch to guarantee identical database on PC and Mobile
   useEffect(() => {
     syncWithBackend();
 
-    const interval = setInterval(syncWithBackend, 5000);
+    const interval = setInterval(syncWithBackend, 3000);
 
     const handleFocus = () => syncWithBackend();
     window.addEventListener('focus', handleFocus);
     window.addEventListener('visibilitychange', handleFocus);
+    window.addEventListener('touchstart', handleFocus, { passive: true });
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('visibilitychange', handleFocus);
+      window.removeEventListener('touchstart', handleFocus);
     };
   }, []);
 
