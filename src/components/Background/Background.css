@@ -1,0 +1,77 @@
+.global-background-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background-color: #0d0f12;
+}
+
+.classic-bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), transform 10s ease-out;
+  transform: scale(1.02);
+  filter: brightness(1.25) contrast(1.1) saturate(1.1);
+}
+
+.classic-bg-image.fade-in {
+  opacity: 0.85;
+  transform: scale(1);
+}
+
+.classic-bg-image.fade-out {
+  opacity: 0.2;
+  transform: scale(1.05);
+}
+
+/* Light & Bright Vignette Overlay so background images shine through clearly */
+.classic-bg-vignette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(
+      ellipse at center, 
+      rgba(10, 11, 13, 0.35) 0%, 
+      rgba(10, 11, 13, 0.55) 60%, 
+      rgba(10, 11, 13, 0.8) 100%
+    ),
+    linear-gradient(
+      180deg, 
+      rgba(10, 11, 13, 0.45) 0%, 
+      rgba(10, 11, 13, 0.35) 50%, 
+      rgba(10, 11, 13, 0.65) 100%
+    );
+}
+
+.classic-gold-glow {
+  position: absolute;
+  width: 50vw;
+  height: 50vw;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.top-left-glow {
+  top: -15vw;
+  left: -15vw;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.18) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+.bottom-right-glow {
+  bottom: -15vw;
+  right: -15vw;
+  background: radial-gradient(circle, rgba(243, 229, 171, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+}

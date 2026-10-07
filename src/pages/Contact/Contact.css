@@ -1,0 +1,348 @@
+.contact-page {
+  padding-top: 130px;
+  background: transparent;
+  min-height: 100vh;
+}
+
+.contact-container {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.contact-hero {
+  padding: 50px 0 30px;
+  text-align: center;
+}
+
+.contact-title {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  letter-spacing: 2px;
+  color: #ffffff;
+  margin-bottom: 14px;
+}
+
+.contact-subtitle {
+  color: var(--text-muted);
+  font-size: 1rem;
+  max-width: 720px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* Main Section */
+.contact-main-section {
+  padding: 50px 0 90px;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 40px;
+}
+
+.form-card {
+  background: #121419;
+  border: 1px solid var(--border-gold);
+  border-radius: 4px;
+  padding: 36px 32px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+
+.form-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 16px;
+}
+
+.form-card-header h2 {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.field-group {
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.field-group label {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+  color: var(--gold-light);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.field-group input,
+.field-group select,
+.field-group textarea {
+  background: #0a0b0d;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  font-family: var(--font-sans);
+  border-radius: 4px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+.contact-file-box {
+  background: #0a0b0d;
+  border: 1px dashed var(--border-gold);
+  padding: 14px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  transition: all 0.3s ease;
+}
+
+.contact-file-box:hover {
+  background: rgba(212, 175, 55, 0.05);
+  border-color: var(--gold-primary);
+  color: var(--gold-light);
+}
+
+.form-submit-btn {
+  width: 100%;
+  padding: 16px;
+  margin-top: 10px;
+}
+
+.form-success-box {
+  text-align: center;
+  padding: 40px 10px;
+}
+
+.form-success-box h3 {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  color: #fff;
+  margin: 16px 0 12px;
+}
+
+.form-success-box p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  margin-bottom: 30px;
+}
+
+/* Info Column */
+.info-card {
+  background: #121419;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 36px 32px;
+}
+
+.info-card-title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+}
+
+.info-reach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin: 24px 0 32px;
+}
+
+.reach-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.reach-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid var(--border-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reach-lbl {
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  color: var(--gold-light);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.reach-val {
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.reach-val:hover {
+  color: var(--gold-light);
+}
+
+.reach-val-text {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.dark-map-container {
+  border: 1px solid var(--border-gold);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Workflow Timeline Section */
+.workflow-section {
+  padding: 90px 0;
+  background: #0d0f12;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.workflow-card {
+  background: #14171d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 28px 20px;
+  border-radius: 4px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.workflow-card:hover {
+  border-color: var(--gold-primary);
+  transform: translateY(-5px);
+}
+
+.workflow-num {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--gold-light);
+  margin-bottom: 10px;
+}
+
+.workflow-step-title {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.workflow-step-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* FAQ Section */
+.faq-section {
+  padding: 90px 0;
+  background: #0a0b0d;
+}
+
+.faq-accordion-box {
+  max-width: 860px;
+  margin: 40px auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.faq-item {
+  background: #14171d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 20px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.faq-item.open,
+.faq-item:hover {
+  border-color: var(--gold-primary);
+}
+
+.faq-question-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.faq-question {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.faq-answer-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+@media (max-width: 960px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+  .workflow-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .form-row-2 {
+    grid-template-columns: 1fr;
+  }
+  .workflow-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-card, .info-card {
+    padding: 24px 18px;
+  }
+}

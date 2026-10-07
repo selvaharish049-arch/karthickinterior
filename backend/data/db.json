@@ -1,0 +1,191 @@
+{
+  "categories": [
+    "All Projects",
+    "Modular Kitchens",
+    "Luxury Living Rooms",
+    "Master Suites",
+    "Commercial & Office Spaces"
+  ],
+  "projects": [
+    {
+      "id": "country-estate",
+      "title": "Country Estate",
+      "category": "Modular Kitchens",
+      "tag": "Modular Kitchens & Living",
+      "desc": "Modern minimalism, dark fluted wood, warm indirect lighting, integrated brass handles, and continuous quartz island.",
+      "image": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80",
+      "renderImage": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80",
+      "executionImage": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80",
+      "planImage": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80",
+      "area": "5,200 Sq. Ft.",
+      "location": "Green Valley Estate",
+      "duration": "90 Calendar Days",
+      "brief": "Create a dark-toned modular kitchen that anchors the open-plan estate living room, emphasizing concealed hardware and subtle warm glows.",
+      "challenge": "Integrating heavy stone slabs with fluted acoustic paneling across seamless 14-foot kitchen island drawers.",
+      "materials": [
+        {
+          "name": "Italian Grigio Marble",
+          "type": "Stone Island Cladding",
+          "color": "#3A3F47"
+        },
+        {
+          "name": "Charcoal Matte Laminate",
+          "type": "Custom Cabinetry",
+          "color": "#1E2229"
+        },
+        {
+          "name": "Brushed Brass Trim",
+          "type": "Metallic Accents & Handles",
+          "color": "#C5A059"
+        },
+        {
+          "name": "Fluted American Walnut",
+          "type": "Wall Acoustic Paneling",
+          "color": "#5C4033"
+        },
+        {
+          "name": "Warm 2700K Indirect LED",
+          "type": "Ceiling Trough Lighting",
+          "color": "#FFE4B5"
+        }
+      ]
+    },
+    {
+      "id": "urban-apartment",
+      "title": "Urban Apartment",
+      "category": "Luxury Living Rooms",
+      "tag": "Contemporary Compact Luxury",
+      "desc": "Contemporary compact luxury, textured marble, custom cabinetry, media wall with integrated LED troughing.",
+      "image": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80",
+      "renderImage": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80",
+      "executionImage": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1000&q=80",
+      "planImage": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80",
+      "area": "2,800 Sq. Ft.",
+      "location": "Metropolitan Tower",
+      "duration": "60 Calendar Days",
+      "brief": "Maximize natural light while infusing rich charcoal hues, Italian Grigio marble, and concealed storage units.",
+      "challenge": "Optimizing ceiling height clearance with concealed HVAC diffusers and perimeter ambient cove lighting.",
+      "materials": [
+        {
+          "name": "Carrara Quartzite",
+          "type": "Media Wall Accent",
+          "color": "#DCDCDC"
+        },
+        {
+          "name": "Smoked Oak Veneer",
+          "type": "Concealed Storage",
+          "color": "#2B231D"
+        },
+        {
+          "name": "Satin Gold Hardware",
+          "type": "Cabinetry Pulls",
+          "color": "#D4AF37"
+        }
+      ]
+    },
+    {
+      "id": "creative-studio",
+      "title": "Creative Studio",
+      "category": "Commercial & Office Spaces",
+      "tag": "Executive Acoustic Studio",
+      "desc": "Executive acoustic wood panels, ergonomic statement desks, micro-cement flooring, and custom display cases.",
+      "image": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1000&q=80",
+      "renderImage": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1000&q=80",
+      "executionImage": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80",
+      "planImage": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1000&q=80",
+      "area": "3,400 Sq. Ft.",
+      "location": "Innovation District",
+      "duration": "45 Calendar Days",
+      "brief": "Design a private executive studio that functions as both a high-stakes board consultation space and a design lounge.",
+      "challenge": "Ensuring STC-50 sound isolation ratings across all fluted wooden wall partitions.",
+      "materials": [
+        {
+          "name": "Acoustic Fluted Oak",
+          "type": "Soundproofing Paneling",
+          "color": "#6E523A"
+        },
+        {
+          "name": "Cognac Leather",
+          "type": "Executive Seating",
+          "color": "#964B00"
+        }
+      ]
+    },
+    {
+      "id": "the-penthouse",
+      "title": "The Penthouse",
+      "category": "Master Suites",
+      "tag": "Master Suites & Panoramic",
+      "desc": "Panoramic architectural ceiling work, ambient backlit display units, customized walk-in dressing room, and master spa.",
+      "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1000&q=80",
+      "renderImage": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1000&q=80",
+      "executionImage": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80",
+      "planImage": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1000&q=80",
+      "area": "6,100 Sq. Ft.",
+      "location": "Skyline Heights",
+      "duration": "110 Calendar Days",
+      "brief": "Ultra-luxurious master bedroom suite featuring a glass-enclosed vanity room, headboard fluting, and automated curtain coves.",
+      "challenge": "Engineered structural floor load distribution for freestanding solid stone soaking tubs on elevated platforms.",
+      "materials": [
+        {
+          "name": "Honey Onyx Stone",
+          "type": "Translucent Backlit Wall",
+          "color": "#D4A373"
+        },
+        {
+          "name": "Polished Brass Trim",
+          "type": "Inlaid Accent Joints",
+          "color": "#E5C158"
+        }
+      ]
+    }
+  ],
+  "customerBookings": [
+    {
+      "fullName": "harish",
+      "phone": "9345612598",
+      "email": "mari@gmail.com",
+      "projectType": "New Luxury Villa / Home",
+      "selectedProduct": "Urban Apartment",
+      "area": "3,800 Sq. Ft.",
+      "budget": "₹1l",
+      "notes": "hi",
+      "fileName": "",
+      "id": "book-1791301907956",
+      "date": "Oct 6, 2026, 09:21 PM",
+      "status": "Pending"
+    }
+  ],
+  "announcements": [
+    {
+      "id": "ann-1",
+      "title": "NEW 2026 MODULAR KITCHEN COLLECTION HANDOVER",
+      "message": "We have completed the 5,200 sq. ft. Country Estate modular woodwork in Mayfair District with 0mm deviation accuracy!",
+      "date": "Recent Handover"
+    }
+  ],
+  "siteImages": {
+    "philosophy": {
+      "moodboard": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=1000&q=80",
+      "sketch": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80",
+      "vision": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1000&q=80",
+      "materials": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1000&q=80"
+    },
+    "teasers": {
+      "country-estate": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+      "urban-apartment": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
+      "creative-studio": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
+      "the-penthouse": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=800&q=80"
+    },
+    "about": {
+      "story": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80"
+    },
+    "services": {
+      "01": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+      "02": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
+      "03": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80",
+      "04": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=800&q=80",
+      "05": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"
+    }
+  }
+}
