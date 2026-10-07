@@ -344,6 +344,7 @@ export const ProjectProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, message })
       });
+      await syncWithBackend();
     } catch (e) {
       console.warn('Backend sync failed for announcement add');
     }
@@ -354,6 +355,7 @@ export const ProjectProvider = ({ children }) => {
 
     try {
       await fetch(`${API_BASE_URL}/announcements/${id}`, { method: 'DELETE' });
+      await syncWithBackend();
     } catch (e) {
       console.warn('Backend sync failed for announcement delete');
     }
@@ -375,6 +377,7 @@ export const ProjectProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ section, key, imageUrl: newUrl })
       });
+      await syncWithBackend();
     } catch (e) {
       console.warn('Backend sync failed for site image update');
     }
@@ -392,6 +395,7 @@ export const ProjectProvider = ({ children }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: trimmed })
         });
+        await syncWithBackend();
       } catch (e) {
         console.warn('Backend sync failed for category add');
       }
@@ -407,6 +411,7 @@ export const ProjectProvider = ({ children }) => {
 
     try {
       await fetch(`${API_BASE_URL}/categories/${encodeURIComponent(catName)}`, { method: 'DELETE' });
+      await syncWithBackend();
     } catch (e) {
       console.warn('Backend sync failed for category delete');
     }
@@ -428,6 +433,7 @@ export const ProjectProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(projectItem)
       });
+      await syncWithBackend();
     } catch (e) {
       console.warn('Backend sync failed for project add');
     }
@@ -439,6 +445,7 @@ export const ProjectProvider = ({ children }) => {
 
     try {
       await fetch(`${API_BASE_URL}/projects/${id}`, { method: 'DELETE' });
+      await syncWithBackend();
     } catch (e) {
       console.warn('Backend sync failed for project delete');
     }
@@ -460,6 +467,7 @@ export const ProjectProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData)
       });
+      await syncWithBackend();
     } catch (e) {
       console.warn('Backend sync failed for booking add');
     }
@@ -472,6 +480,7 @@ export const ProjectProvider = ({ children }) => {
 
     try {
       await fetch(`${API_BASE_URL}/bookings/${id}`, { method: 'DELETE' });
+      await syncWithBackend();
     } catch (e) {
       console.warn('Backend sync failed for booking delete');
     }
@@ -487,6 +496,7 @@ export const ProjectProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
+      await syncWithBackend();
     } catch (e) {
       console.warn('Backend sync failed for booking status update');
     }
