@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Play, ArrowRight, Compass } from 'lucide-react';
+import { Sparkles, Layers, Compass, ChevronRight, MessageSquare } from 'lucide-react';
 import heroBgOlive from '../../assets/images/hero-bg-olive.jpg';
 import './HeroBanner.css';
 
@@ -18,7 +18,7 @@ const HeroBanner = ({ onOpenModal }) => {
         <div className="hero-content">
           {/* Top Tagline */}
           <div className="hero-badge">
-            <Compass size={14} className="gold-icon" />
+            <Compass size={14} className="cyan-icon" />
             <span>DESIGNED FOR INSPIRED SPACES</span>
           </div>
 
@@ -33,17 +33,54 @@ const HeroBanner = ({ onOpenModal }) => {
             Custom residential & commercial interior architecture, modular woodwork, and premium craftsmanship. We craft sophisticated, bespoke interiors for the most discerning clients.
           </p>
 
-          {/* Primary Action Buttons */}
-          <div className="hero-actions">
-            <Link to="/collections" className="gold-btn hero-btn-primary">
-              <span>EXPLORE PROJECTS</span>
-              <ArrowRight size={16} />
-            </Link>
+          {/* Interactive Floating Glass Category Cards & Instant Consultation Pill */}
+          <div className="hero-glass-interactive-section">
+            <span className="hero-section-label">INTERACTIVE QUICK COLLECTION PORTALS</span>
+            
+            <div className="hero-glass-cards-grid">
+              <Link to="/collections" className="glass-category-card">
+                <div className="glass-card-icon">
+                  <Sparkles size={18} />
+                </div>
+                <div className="glass-card-info">
+                  <span className="glass-card-title">Modular Kitchens</span>
+                  <span className="glass-card-sub">Italian Marble & Quartz Islands</span>
+                </div>
+                <ChevronRight size={16} className="card-arrow" />
+              </Link>
 
-            <button className="gold-btn-solid hero-btn-secondary" onClick={onOpenModal}>
-              <Play size={14} fill="#0d0f12" />
-              <span>BOOK CONSULTATION</span>
-            </button>
+              <Link to="/collections" className="glass-category-card">
+                <div className="glass-card-icon">
+                  <Layers size={18} />
+                </div>
+                <div className="glass-card-info">
+                  <span className="glass-card-title">Living Room Suites</span>
+                  <span className="glass-card-sub">Acoustic Fluted Wood Walls</span>
+                </div>
+                <ChevronRight size={16} className="card-arrow" />
+              </Link>
+
+              <Link to="/collections" className="glass-category-card">
+                <div className="glass-card-icon">
+                  <Compass size={18} />
+                </div>
+                <div className="glass-card-info">
+                  <span className="glass-card-title">Master Penthouse</span>
+                  <span className="glass-card-sub">Panoramic Ceiling & Spa</span>
+                </div>
+                <ChevronRight size={16} className="card-arrow" />
+              </Link>
+            </div>
+
+            {/* Instant Consultation Pill Trigger */}
+            <div className="instant-consultation-trigger-bar">
+              <button className="hero-consultation-pill" onClick={onOpenModal}>
+                <div className="pill-pulse-dot"></div>
+                <MessageSquare size={16} />
+                <span>REQUEST BESPOKE 3D BLUEPRINT CONSULTATION</span>
+                <div className="pill-tag">⚡ 24H GUARANTEE</div>
+              </button>
+            </div>
           </div>
 
           {/* Quick Metrics Bar */}

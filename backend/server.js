@@ -236,8 +236,19 @@ app.put('/api/site-images', (req, res) => {
   res.json({ success: true, siteImages: db.siteImages });
 });
 
-// Root Health Check Route
-app.get('/', (req, res) => {
+// Serve static React build files for Render / Production
+const BUILD_DIR = path.join(__dirname, '..', 'build');
+if (fs.existsSync(BUILD_DIR)) {
+  app.use(express.static(BUILD_DIR));
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      res.sendFile(path.join(BUILD_DIR, 'index.html'));
+    }
+  });
+}
+
+// Health Check API Route
+app.get('/api/health', (req, res) => {
   res.json({ status: 'Online', message: 'Luxe Interiors Backend API Server Running on Port ' + PORT });
 });
 

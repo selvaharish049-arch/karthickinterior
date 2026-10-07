@@ -1,7 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const ProjectContext = createContext();
-const API_BASE_URL = 'http://localhost:5000/api';
+
+const getApiBaseUrl = () => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `${window.location.origin}/api`;
+  }
+  return 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Default Initial Collections
 const DEFAULT_CATEGORIES = [
@@ -183,29 +194,42 @@ export const ProjectProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : DEFAULT_BOOKINGS;
   });
 
-  // Load initial data from Node.js Express API on mount
+  // Sync live database from backend server across all PCs
+  const syncWithBackend = async () => {
+    try {
+      const [projRes, catRes, annRes, bookRes, imgRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/projects`).then(r => r.json()),
+        fetch(`${API_BASE_URL}/categories`).then(r => r.json()),
+        fetch(`${API_BASE_URL}/announcements`).then(r => r.json()),
+        fetch(`${API_BASE_URL}/bookings`).then(r => r.json()),
+        fetch(`${API_BASE_URL}/site-images`).then(r => r.json())
+      ]);
+
+      if (projRes?.success) setProjects(projRes.projects);
+      if (catRes?.success) setCategories(catRes.categories);
+      if (annRes?.success) setAnnouncements(annRes.announcements);
+      if (bookRes?.success) setCustomerBookings(bookRes.customerBookings);
+      if (imgRes?.success && Object.keys(imgRes.siteImages || {}).length > 0) setSiteImages(imgRes.siteImages);
+    } catch (err) {
+      console.warn('Backend server offline or unreachable. Using cached state.', err);
+    }
+  };
+
+  // Poll server every 5s & sync on tab focus to guarantee real-time updates on all PCs
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const [projRes, catRes, annRes, bookRes, imgRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/projects`).then(r => r.json()),
-          fetch(`${API_BASE_URL}/categories`).then(r => r.json()),
-          fetch(`${API_BASE_URL}/announcements`).then(r => r.json()),
-          fetch(`${API_BASE_URL}/bookings`).then(r => r.json()),
-          fetch(`${API_BASE_URL}/site-images`).then(r => r.json())
-        ]);
+    syncWithBackend();
 
-        if (projRes?.success && projRes.projects?.length > 0) setProjects(projRes.projects);
-        if (catRes?.success && catRes.categories?.length > 0) setCategories(catRes.categories);
-        if (annRes?.success && annRes.announcements?.length > 0) setAnnouncements(annRes.announcements);
-        if (bookRes?.success && bookRes.customerBookings?.length > 0) setCustomerBookings(bookRes.customerBookings);
-        if (imgRes?.success && Object.keys(imgRes.siteImages || {}).length > 0) setSiteImages(imgRes.siteImages);
-      } catch (err) {
-        console.warn('Backend server offline or unreachable. Using localStorage state.', err);
-      }
+    const interval = setInterval(syncWithBackend, 5000);
+
+    const handleFocus = () => syncWithBackend();
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleFocus);
     };
-
-    fetchInitialData();
   }, []);
 
   // Sync state changes to localStorage as fallback cache
