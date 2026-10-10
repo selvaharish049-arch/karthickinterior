@@ -105,9 +105,30 @@ app.post('/api/projects', (req, res) => {
     tag: newProject.tag || newProject.category || 'Luxury Interior'
   };
 
-  db.projects = [projectItem, ...(db.projects || [])];
+  const existingIdx = (db.projects || []).findIndex(p => p.id === id);
+  if (existingIdx !== -1) {
+    db.projects[existingIdx] = { ...db.projects[existingIdx], ...projectItem };
+  } else {
+    db.projects = [projectItem, ...(db.projects || [])];
+  }
+
   writeDB(db);
-  res.json({ success: true, project: projectItem });
+  res.json({ success: true, project: projectItem, projects: db.projects });
+});
+
+app.put('/api/projects/:id', (req, res) => {
+  const db = readDB();
+  const { id } = req.params;
+  const updatedData = req.body;
+
+  const existingIdx = (db.projects || []).findIndex(p => p.id === id);
+  if (existingIdx === -1) {
+    return res.status(404).json({ success: false, error: 'Project not found' });
+  }
+
+  db.projects[existingIdx] = { ...db.projects[existingIdx], ...updatedData, id };
+  writeDB(db);
+  res.json({ success: true, project: db.projects[existingIdx], projects: db.projects });
 });
 
 app.delete('/api/projects/:id', (req, res) => {
@@ -115,7 +136,7 @@ app.delete('/api/projects/:id', (req, res) => {
   const { id } = req.params;
   db.projects = (db.projects || []).filter(p => p.id !== id);
   writeDB(db);
-  res.json({ success: true, message: 'Project deleted successfully' });
+  res.json({ success: true, message: 'Project deleted successfully', projects: db.projects });
 });
 
 // 4. Categories API Endpoints
@@ -136,6 +157,24 @@ app.post('/api/categories', (req, res) => {
     writeDB(db);
   }
   res.json({ success: true, categories: db.categories });
+});
+
+app.put('/api/categories/:oldName', (req, res) => {
+  const db = readDB();
+  const oldName = decodeURIComponent(req.params.oldName);
+  const { newName } = req.body;
+  if (!newName || !newName.trim()) {
+    return res.status(400).json({ success: false, error: 'New category name required' });
+  }
+  const trimmed = newName.trim();
+
+  const idx = (db.categories || []).indexOf(oldName);
+  if (idx !== -1) {
+    db.categories[idx] = trimmed;
+    db.projects = (db.projects || []).map(p => p.category === oldName ? { ...p, category: trimmed } : p);
+    writeDB(db);
+  }
+  res.json({ success: true, categories: db.categories, projects: db.projects });
 });
 
 app.delete('/api/categories/:name', (req, res) => {
@@ -166,7 +205,7 @@ app.post('/api/bookings', (req, res) => {
   };
   db.customerBookings = [newBooking, ...(db.customerBookings || [])];
   writeDB(db);
-  res.json({ success: true, booking: newBooking });
+  res.json({ success: true, booking: newBooking, customerBookings: db.customerBookings });
 });
 
 app.put('/api/bookings/:id/status', (req, res) => {
@@ -175,7 +214,7 @@ app.put('/api/bookings/:id/status', (req, res) => {
   const { status } = req.body;
   db.customerBookings = (db.customerBookings || []).map(b => b.id === id ? { ...b, status } : b);
   writeDB(db);
-  res.json({ success: true, message: 'Status updated successfully' });
+  res.json({ success: true, message: 'Status updated successfully', customerBookings: db.customerBookings });
 });
 
 app.delete('/api/bookings/:id', (req, res) => {
@@ -183,7 +222,7 @@ app.delete('/api/bookings/:id', (req, res) => {
   const { id } = req.params;
   db.customerBookings = (db.customerBookings || []).filter(b => b.id !== id);
   writeDB(db);
-  res.json({ success: true, message: 'Booking deleted' });
+  res.json({ success: true, message: 'Booking deleted', customerBookings: db.customerBookings });
 });
 
 // 6. Customer Announcements API Endpoints
@@ -206,7 +245,7 @@ app.post('/api/announcements', (req, res) => {
   };
   db.announcements = [newAnn, ...(db.announcements || [])];
   writeDB(db);
-  res.json({ success: true, announcement: newAnn });
+  res.json({ success: true, announcement: newAnn, announcements: db.announcements });
 });
 
 app.delete('/api/announcements/:id', (req, res) => {
@@ -214,7 +253,7 @@ app.delete('/api/announcements/:id', (req, res) => {
   const { id } = req.params;
   db.announcements = (db.announcements || []).filter(a => a.id !== id);
   writeDB(db);
-  res.json({ success: true, message: 'Announcement deleted' });
+  res.json({ success: true, message: 'Announcement deleted', announcements: db.announcements });
 });
 
 // 7. Site Images API Endpoints

@@ -339,12 +339,17 @@ export const ProjectProvider = ({ children }) => {
     setAnnouncements(prev => [newAnn, ...prev]);
 
     try {
-      await fetch(`${API_BASE_URL}/announcements`, {
+      const res = await fetch(`${API_BASE_URL}/announcements`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, message })
       });
-      await syncWithBackend();
+      const data = await res.json();
+      if (data.success && Array.isArray(data.announcements)) {
+        setAnnouncements(data.announcements);
+      } else {
+        await syncWithBackend();
+      }
     } catch (e) {
       console.warn('Backend sync failed for announcement add');
     }
@@ -354,8 +359,13 @@ export const ProjectProvider = ({ children }) => {
     setAnnouncements(prev => prev.filter(a => a.id !== id));
 
     try {
-      await fetch(`${API_BASE_URL}/announcements/${id}`, { method: 'DELETE' });
-      await syncWithBackend();
+      const res = await fetch(`${API_BASE_URL}/announcements/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.announcements)) {
+        setAnnouncements(data.announcements);
+      } else {
+        await syncWithBackend();
+      }
     } catch (e) {
       console.warn('Backend sync failed for announcement delete');
     }
@@ -372,12 +382,17 @@ export const ProjectProvider = ({ children }) => {
     }));
 
     try {
-      await fetch(`${API_BASE_URL}/site-images`, {
+      const res = await fetch(`${API_BASE_URL}/site-images`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ section, key, imageUrl: newUrl })
       });
-      await syncWithBackend();
+      const data = await res.json();
+      if (data.success && data.siteImages) {
+        setSiteImages(data.siteImages);
+      } else {
+        await syncWithBackend();
+      }
     } catch (e) {
       console.warn('Backend sync failed for site image update');
     }
@@ -390,12 +405,17 @@ export const ProjectProvider = ({ children }) => {
       setCategories(prev => [...prev, trimmed]);
 
       try {
-        await fetch(`${API_BASE_URL}/categories`, {
+        const res = await fetch(`${API_BASE_URL}/categories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: trimmed })
         });
-        await syncWithBackend();
+        const data = await res.json();
+        if (data.success && Array.isArray(data.categories)) {
+          setCategories(data.categories);
+        } else {
+          await syncWithBackend();
+        }
       } catch (e) {
         console.warn('Backend sync failed for category add');
       }
@@ -410,8 +430,13 @@ export const ProjectProvider = ({ children }) => {
     setCategories(prev => prev.filter(c => c !== catName));
 
     try {
-      await fetch(`${API_BASE_URL}/categories/${encodeURIComponent(catName)}`, { method: 'DELETE' });
-      await syncWithBackend();
+      const res = await fetch(`${API_BASE_URL}/categories/${encodeURIComponent(catName)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.categories)) {
+        setCategories(data.categories);
+      } else {
+        await syncWithBackend();
+      }
     } catch (e) {
       console.warn('Backend sync failed for category delete');
     }
@@ -428,12 +453,17 @@ export const ProjectProvider = ({ children }) => {
     setProjects(prev => [projectItem, ...prev]);
 
     try {
-      await fetch(`${API_BASE_URL}/projects`, {
+      const res = await fetch(`${API_BASE_URL}/projects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(projectItem)
       });
-      await syncWithBackend();
+      const data = await res.json();
+      if (data.success && Array.isArray(data.projects)) {
+        setProjects(data.projects);
+      } else {
+        await syncWithBackend();
+      }
     } catch (e) {
       console.warn('Backend sync failed for project add');
     }
@@ -444,8 +474,13 @@ export const ProjectProvider = ({ children }) => {
     setProjects(prev => prev.filter(p => p.id !== id));
 
     try {
-      await fetch(`${API_BASE_URL}/projects/${id}`, { method: 'DELETE' });
-      await syncWithBackend();
+      const res = await fetch(`${API_BASE_URL}/projects/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.projects)) {
+        setProjects(data.projects);
+      } else {
+        await syncWithBackend();
+      }
     } catch (e) {
       console.warn('Backend sync failed for project delete');
     }
@@ -462,12 +497,17 @@ export const ProjectProvider = ({ children }) => {
     setCustomerBookings(prev => [newBooking, ...prev]);
 
     try {
-      await fetch(`${API_BASE_URL}/bookings`, {
+      const res = await fetch(`${API_BASE_URL}/bookings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bookingData)
       });
-      await syncWithBackend();
+      const data = await res.json();
+      if (data.success && Array.isArray(data.customerBookings)) {
+        setCustomerBookings(data.customerBookings);
+      } else {
+        await syncWithBackend();
+      }
     } catch (e) {
       console.warn('Backend sync failed for booking add');
     }
@@ -479,8 +519,13 @@ export const ProjectProvider = ({ children }) => {
     setCustomerBookings(prev => prev.filter(b => b.id !== id));
 
     try {
-      await fetch(`${API_BASE_URL}/bookings/${id}`, { method: 'DELETE' });
-      await syncWithBackend();
+      const res = await fetch(`${API_BASE_URL}/bookings/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.customerBookings)) {
+        setCustomerBookings(data.customerBookings);
+      } else {
+        await syncWithBackend();
+      }
     } catch (e) {
       console.warn('Backend sync failed for booking delete');
     }
@@ -491,14 +536,72 @@ export const ProjectProvider = ({ children }) => {
     setCustomerBookings(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
 
     try {
-      await fetch(`${API_BASE_URL}/bookings/${id}/status`, {
+      const res = await fetch(`${API_BASE_URL}/bookings/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
-      await syncWithBackend();
+      const data = await res.json();
+      if (data.success && Array.isArray(data.customerBookings)) {
+        setCustomerBookings(data.customerBookings);
+      } else {
+        await syncWithBackend();
+      }
     } catch (e) {
       console.warn('Backend sync failed for booking status update');
+    }
+  };
+
+  // Edit existing project
+  const editProject = async (id, updatedData) => {
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updatedData } : p));
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/projects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.projects)) {
+        setProjects(data.projects);
+      } else {
+        await syncWithBackend();
+      }
+      return { success: true };
+    } catch (e) {
+      console.warn('Backend sync failed for project edit', e);
+      return { success: false, error: e.message };
+    }
+  };
+
+  // Edit category name
+  const editCategory = async (oldName, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed || oldName === 'All Projects') return false;
+    
+    setCategories(prev => prev.map(c => c === oldName ? trimmed : c));
+    setProjects(prev => prev.map(p => p.category === oldName ? { ...p, category: trimmed } : p));
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/categories/${encodeURIComponent(oldName)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newName: trimmed })
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.categories)) {
+        setCategories(data.categories);
+        if (Array.isArray(data.projects)) {
+          setProjects(data.projects);
+        }
+      } else {
+        await syncWithBackend();
+      }
+      return true;
+    } catch (e) {
+      console.warn('Backend sync failed for category edit', e);
+      return false;
     }
   };
 
@@ -516,8 +619,10 @@ export const ProjectProvider = ({ children }) => {
       projects,
       customerBookings,
       addCategory,
+      editCategory,
       deleteCategory,
       addProject,
+      editProject,
       deleteProject,
       addBooking,
       deleteBooking,

@@ -119,10 +119,10 @@ const Admin = () => {
   const [bookingFilterStatus, setBookingFilterStatus] = useState('All');
 
   // Handle Category Submit
-  const handleCatSubmit = (e) => {
+  const handleCatSubmit = async (e) => {
     e.preventDefault();
     if (!newCatName.trim()) return;
-    const success = addCategory(newCatName);
+    const success = await addCategory(newCatName);
     if (success) {
       setCatMessage(`New collection "${newCatName}" successfully created!`);
       setNewCatName('');
@@ -165,7 +165,7 @@ const Admin = () => {
   };
 
   // Handle Project Submit
-  const handleProjSubmit = (e) => {
+  const handleProjSubmit = async (e) => {
     e.preventDefault();
     if (!projectData.title.trim()) return;
 
@@ -183,7 +183,7 @@ const Admin = () => {
       challenge: projectData.challenge || 'Seamless spatial circulation and millimeter-accurate installation across high-ceiling spans.'
     };
 
-    addProject(finalProject);
+    await addProject(finalProject);
     setProjMessage(`Product "${projectData.title}" successfully added to "${projectData.category}"!`);
     
     setProjectData({
