@@ -201,14 +201,18 @@ export const ProjectProvider = ({ children }) => {
   });
 
   // Sync live database from backend server across all PCs & Mobile devices
-  const syncWithBackend = async () => {
+  const syncWithBackend = async (retryCount = 0) => {
     try {
+      const baseUrl = getApiBaseUrl();
+      const ts = Date.now();
+      const fetchOpts = { cache: 'no-store', headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' } };
+
       const [projRes, catRes, annRes, bookRes, imgRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/projects`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/categories`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/announcements`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/bookings`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/site-images`).then(r => r.json())
+        fetch(`${baseUrl}/projects?t=${ts}`, fetchOpts).then(r => r.json()),
+        fetch(`${baseUrl}/categories?t=${ts}`, fetchOpts).then(r => r.json()),
+        fetch(`${baseUrl}/announcements?t=${ts}`, fetchOpts).then(r => r.json()),
+        fetch(`${baseUrl}/bookings?t=${ts}`, fetchOpts).then(r => r.json()),
+        fetch(`${baseUrl}/site-images?t=${ts}`, fetchOpts).then(r => r.json())
       ]);
 
       if (projRes?.success && Array.isArray(projRes.projects)) {
@@ -232,7 +236,10 @@ export const ProjectProvider = ({ children }) => {
         localStorage.setItem('luxe_site_images', JSON.stringify(imgRes.siteImages));
       }
     } catch (err) {
-      console.warn('Backend server offline or unreachable. Using cached state.', err);
+      console.warn('Backend server offline or unreachable. Retrying sync...', err);
+      if (retryCount < 4) {
+        setTimeout(() => syncWithBackend(retryCount + 1), 1500 * (retryCount + 1));
+      }
     }
   };
 
@@ -253,6 +260,7 @@ export const ProjectProvider = ({ children }) => {
       window.removeEventListener('visibilitychange', handleFocus);
       window.removeEventListener('touchstart', handleFocus);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sync state changes to localStorage as fallback cache
