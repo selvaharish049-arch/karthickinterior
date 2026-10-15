@@ -1163,6 +1163,7 @@ const Admin = () => {
                   ></textarea>
                 </div>
                 {annSuccessMsg && <p style={{ color: '#10b981', fontSize: '0.85rem', marginBottom: '16px' }}>{annSuccessMsg}</p>}
+                {annErrorMsg && <p style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '16px' }}>{annErrorMsg}</p>}
                 <button type="submit" className="gold-btn-solid">
                   <Send size={16} />
                   <span>PUBLISH LIVE WEBSITE UPDATE</span>
