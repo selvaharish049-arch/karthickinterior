@@ -23,12 +23,15 @@ import {
   Image as ImageIcon,
   Megaphone,
   Send,
-  Package
+  Package,
+  AlertCircle,
+  Edit3
 } from 'lucide-react';
 import './Admin.css';
 
 const Admin = () => {
   const { 
+    serverOnline,
     isAdminLoggedIn,
     loginAdmin,
     logoutAdmin,
@@ -41,8 +44,10 @@ const Admin = () => {
     projects, 
     customerBookings,
     addCategory, 
+    editCategory,
     deleteCategory, 
     addProject, 
+    editProject,
     deleteProject,
     deleteBooking,
     updateBookingStatus,
@@ -57,15 +62,22 @@ const Admin = () => {
   const [annTitle, setAnnTitle] = useState('');
   const [annMessage, setAnnMessage] = useState('');
   const [annSuccessMsg, setAnnSuccessMsg] = useState('');
+  const [annErrorMsg, setAnnErrorMsg] = useState('');
 
-  const handleAnnounceSubmit = (e) => {
+  const handleAnnounceSubmit = async (e) => {
     e.preventDefault();
     if (!annTitle.trim()) return;
-    addAnnouncement(annTitle, annMessage);
-    setAnnTitle('');
-    setAnnMessage('');
-    setAnnSuccessMsg('Live website update published successfully for all customers!');
-    setTimeout(() => setAnnSuccessMsg(''), 4000);
+    const res = await addAnnouncement(annTitle, annMessage);
+    if (res && res.success) {
+      setAnnTitle('');
+      setAnnMessage('');
+      setAnnSuccessMsg('Live website update published successfully for all customers!');
+      setAnnErrorMsg('');
+      setTimeout(() => setAnnSuccessMsg(''), 4000);
+    } else {
+      setAnnErrorMsg(res?.error || 'Failed to publish announcement to server.');
+      setTimeout(() => setAnnErrorMsg(''), 5000);
+    }
   };
 
   const handleSendCustomUpdateWa = (customerPhone, customerName, currentProduct) => {
@@ -93,8 +105,10 @@ const Admin = () => {
   // Category Form State
   const [newCatName, setNewCatName] = useState('');
   const [catMessage, setCatMessage] = useState('');
+  const [catError, setCatError] = useState('');
 
   // Project Form State
+  const [editingProjectId, setEditingProjectId] = useState(null);
   const [projectData, setProjectData] = useState({
     title: '',
     category: categories[1] || 'Modular Kitchens',
@@ -116,20 +130,51 @@ const Admin = () => {
   });
 
   const [projMessage, setProjMessage] = useState('');
+  const [projError, setProjError] = useState('');
   const [bookingFilterStatus, setBookingFilterStatus] = useState('All');
 
   // Handle Category Submit
   const handleCatSubmit = async (e) => {
     e.preventDefault();
     if (!newCatName.trim()) return;
-    const success = await addCategory(newCatName);
-    if (success) {
-      setCatMessage(`New collection "${newCatName}" successfully created!`);
+    const res = await addCategory(newCatName);
+    if (res && res.success) {
+      setCatMessage(`New collection "${newCatName}" successfully saved to server database!`);
+      setCatError('');
       setNewCatName('');
       setTimeout(() => setCatMessage(''), 4000);
     } else {
-      setCatMessage(`Collection "${newCatName}" already exists.`);
-      setTimeout(() => setCatMessage(''), 4000);
+      setCatError(res?.error || `Failed to create collection.`);
+      setTimeout(() => setCatError(''), 5000);
+    }
+  };
+
+  const handleEditCategory = async (cat) => {
+    const newName = window.prompt(`Enter new name for collection "${cat}":`, cat);
+    if (newName && newName.trim() && newName.trim() !== cat) {
+      const res = await editCategory(cat, newName.trim());
+      if (res && res.success) {
+        setCatMessage(`Collection renamed to "${newName.trim()}"!`);
+        setCatError('');
+        setTimeout(() => setCatMessage(''), 4000);
+      } else {
+        setCatError(res?.error || 'Failed to rename collection on server.');
+        setTimeout(() => setCatError(''), 5000);
+      }
+    }
+  };
+
+  const handleDeleteCategory = async (cat) => {
+    if (window.confirm(`Are you sure you want to delete the collection "${cat}"? Products in it will be moved to "All Projects".`)) {
+      const res = await deleteCategory(cat);
+      if (res && res.success) {
+        setCatMessage(`Collection "${cat}" deleted from server database.`);
+        setCatError('');
+        setTimeout(() => setCatMessage(''), 4000);
+      } else {
+        setCatError(res?.error || 'Failed to delete collection from server.');
+        setTimeout(() => setCatError(''), 5000);
+      }
     }
   };
 
@@ -164,28 +209,8 @@ const Admin = () => {
     });
   };
 
-  // Handle Project Submit
-  const handleProjSubmit = async (e) => {
-    e.preventDefault();
-    if (!projectData.title.trim()) return;
-
-    const defaultImg = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80';
-    
-    const finalProject = {
-      ...projectData,
-      tag: projectData.tag || projectData.category,
-      desc: projectData.desc || 'Custom luxury architectural interior with bespoke modular joinery and ambient lighting.',
-      image: projectData.image || defaultImg,
-      renderImage: projectData.renderImage || projectData.image || defaultImg,
-      executionImage: projectData.executionImage || projectData.image || defaultImg,
-      planImage: projectData.planImage || defaultImg,
-      brief: projectData.brief || 'Client requested an opulent bespoke interior designed with certified premium materials and concealed fittings.',
-      challenge: projectData.challenge || 'Seamless spatial circulation and millimeter-accurate installation across high-ceiling spans.'
-    };
-
-    await addProject(finalProject);
-    setProjMessage(`Product "${projectData.title}" successfully added to "${projectData.category}"!`);
-    
+  const resetProjectForm = () => {
+    setEditingProjectId(null);
     setProjectData({
       title: '',
       category: categories[1] || 'Modular Kitchens',
@@ -205,8 +230,89 @@ const Admin = () => {
         { name: 'Brushed Brass Trim', type: 'Accent Trim', color: '#C5A059' }
       ]
     });
+  };
 
-    setTimeout(() => setProjMessage(''), 4000);
+  const handleEditProductClick = (proj) => {
+    setEditingProjectId(proj.id);
+    setProjectData({
+      title: proj.title || '',
+      category: proj.category || categories[1] || 'Modular Kitchens',
+      tag: proj.tag || '',
+      desc: proj.desc || '',
+      image: proj.image || '',
+      renderImage: proj.renderImage || '',
+      executionImage: proj.executionImage || '',
+      planImage: proj.planImage || '',
+      area: proj.area || '3,800 Sq. Ft.',
+      location: proj.location || 'Private Villa',
+      duration: proj.duration || '75 Calendar Days',
+      brief: proj.brief || '',
+      challenge: proj.challenge || '',
+      materials: Array.isArray(proj.materials) && proj.materials.length > 0 ? proj.materials : [
+        { name: 'Italian Marble Slab', type: 'Wall Cladding', color: '#3A3F47' },
+        { name: 'Brushed Brass Trim', type: 'Accent Trim', color: '#C5A059' }
+      ]
+    });
+    setActiveTab('create-project');
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+  };
+
+  const handleDeleteProject = async (proj) => {
+    if (window.confirm(`Are you sure you want to permanently delete "${proj.title}" from the master database?`)) {
+      const res = await deleteProject(proj.id);
+      if (res && res.success) {
+        setProjMessage(`Product "${proj.title}" deleted successfully.`);
+        setProjError('');
+        setTimeout(() => setProjMessage(''), 4000);
+      } else {
+        alert(res?.error || 'Failed to delete product from database.');
+      }
+    }
+  };
+
+  // Handle Project Submit
+  const handleProjSubmit = async (e) => {
+    e.preventDefault();
+    if (!projectData.title.trim()) return;
+
+    const defaultImg = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80';
+    
+    const finalProject = {
+      ...projectData,
+      title: projectData.title.trim(),
+      tag: projectData.tag || projectData.category,
+      desc: projectData.desc || 'Custom luxury architectural interior with bespoke modular joinery and ambient lighting.',
+      image: projectData.image || defaultImg,
+      renderImage: projectData.renderImage || projectData.image || defaultImg,
+      executionImage: projectData.executionImage || projectData.image || defaultImg,
+      planImage: projectData.planImage || defaultImg,
+      brief: projectData.brief || 'Client requested an opulent bespoke interior designed with certified premium materials and concealed fittings.',
+      challenge: projectData.challenge || 'Seamless spatial circulation and millimeter-accurate installation across high-ceiling spans.'
+    };
+
+    if (editingProjectId) {
+      const res = await editProject(editingProjectId, finalProject);
+      if (res && res.success) {
+        setProjMessage(`Product "${projectData.title}" updated successfully in database!`);
+        setProjError('');
+        resetProjectForm();
+        setTimeout(() => setProjMessage(''), 4000);
+      } else {
+        setProjError(res?.error || 'Failed to update product on server database.');
+        setTimeout(() => setProjError(''), 6000);
+      }
+    } else {
+      const res = await addProject(finalProject);
+      if (res && res.success) {
+        setProjMessage(`Product "${projectData.title}" successfully added to "${projectData.category}"!`);
+        setProjError('');
+        resetProjectForm();
+        setTimeout(() => setProjMessage(''), 4000);
+      } else {
+        setProjError(res?.error || 'Failed to save product to server database.');
+        setTimeout(() => setProjError(''), 6000);
+      }
+    }
   };
 
   // Helper to construct WhatsApp link for Admin to reply to Customer
@@ -282,9 +388,33 @@ const Admin = () => {
         {/* Admin Header */}
         <div className="admin-header">
           <div>
-            <div className="admin-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={14} />
-              <span>STUDIO CONTENT & CUSTOMER DATABASE CONTROL</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
+              <div className="admin-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={14} />
+                <span>STUDIO CONTENT & CUSTOMER DATABASE CONTROL</span>
+              </div>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '4px 12px',
+                borderRadius: '16px',
+                background: serverOnline ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                border: serverOnline ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+                color: serverOnline ? '#4ade80' : '#f87171',
+                fontSize: '0.74rem',
+                fontWeight: 600,
+                letterSpacing: '0.5px'
+              }}>
+                <span style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  backgroundColor: serverOnline ? '#4ade80' : '#f87171',
+                  boxShadow: serverOnline ? '0 0 6px #4ade80' : '0 0 6px #f87171'
+                }}></span>
+                {serverOnline ? 'MASTER SERVER DATABASE CONNECTED' : 'SERVER OFFLINE (ATTEMPTING RECONNECT)'}
+              </div>
             </div>
             <h1 className="admin-title">ADMIN CONTROL CENTER</h1>
             <p className="admin-subtitle">
@@ -513,6 +643,13 @@ const Admin = () => {
               </div>
             )}
 
+            {catError && (
+              <div className="admin-toast error-toast" style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: '4px', marginBottom: '20px' }}>
+                <AlertCircle size={18} color="#ef4444" />
+                <span>{catError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleCatSubmit} className="admin-form">
               <div className="admin-field-group">
                 <label>NEW COLLECTION NAME *</label>
@@ -539,13 +676,25 @@ const Admin = () => {
                   <div key={cat} className="category-tag-chip">
                     <span>{cat}</span>
                     {cat !== 'All Projects' && (
-                      <button 
-                        className="delete-chip-btn" 
-                        onClick={() => deleteCategory(cat)}
-                        title="Delete Collection"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: '8px' }}>
+                        <button 
+                          type="button"
+                          className="edit-chip-btn" 
+                          onClick={() => handleEditCategory(cat)}
+                          title="Rename Collection"
+                          style={{ background: 'transparent', border: 'none', color: '#d4af37', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button 
+                          type="button"
+                          className="delete-chip-btn" 
+                          onClick={() => handleDeleteCategory(cat)}
+                          title="Delete Collection"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -559,16 +708,37 @@ const Admin = () => {
           <div className="admin-card">
             <div className="card-top-header">
               <PackagePlus size={22} className="gold-icon" />
-              <h2>ADD PRODUCT / PROJECT TO COLLECTION</h2>
+              <h2>{editingProjectId ? 'EDIT PRODUCT / PROJECT' : 'ADD PRODUCT / PROJECT TO COLLECTION'}</h2>
             </div>
             <p className="admin-card-desc">
-              Add a new architectural project or modular product to any existing or newly created collection.
+              {editingProjectId 
+                ? 'Update architectural specifications or media assets for this product in the master database.'
+                : 'Add a new architectural project or modular product to any existing or newly created collection.'}
             </p>
+
+            {editingProjectId && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(212,175,55,0.12)', border: '1px solid var(--border-gold)', padding: '12px 18px', borderRadius: '4px', marginBottom: '20px' }}>
+                <span style={{ color: 'var(--gold-light)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Edit3 size={16} color="#d4af37" />
+                  Currently editing: <strong style={{ color: '#ffffff' }}>{projectData.title}</strong>
+                </span>
+                <button type="button" className="gold-btn btn-sm" onClick={resetProjectForm} style={{ padding: '6px 14px', fontSize: '0.78rem' }}>
+                  CANCEL EDIT (ADD NEW)
+                </button>
+              </div>
+            )}
 
             {projMessage && (
               <div className="admin-toast success-toast">
                 <CheckCircle2 size={18} />
                 <span>{projMessage}</span>
+              </div>
+            )}
+
+            {projError && (
+              <div className="admin-toast error-toast" style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderRadius: '4px', marginBottom: '20px' }}>
+                <AlertCircle size={18} color="#ef4444" />
+                <span>{projError}</span>
               </div>
             )}
 
@@ -783,7 +953,7 @@ const Admin = () => {
 
               <button type="submit" className="gold-btn-solid submit-project-btn">
                 <PackagePlus size={18} />
-                <span>PUBLISH PRODUCT TO COLLECTION</span>
+                <span>{editingProjectId ? 'UPDATE PRODUCT IN MASTER DATABASE' : 'PUBLISH PRODUCT TO COLLECTION'}</span>
               </button>
             </form>
           </div>
@@ -812,13 +982,24 @@ const Admin = () => {
                     <p className="catalog-location">{proj.location} • {proj.area}</p>
                     <p className="catalog-desc">{proj.desc}</p>
                     
-                    <div className="catalog-actions">
+                    <div className="catalog-actions" style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                       <button 
+                        type="button"
+                        className="gold-btn btn-sm" 
+                        onClick={() => handleEditProductClick(proj)}
+                        style={{ padding: '8px 12px', fontSize: '0.75rem', flex: 1, justifyContent: 'center' }}
+                      >
+                        <Edit3 size={14} />
+                        <span>EDIT</span>
+                      </button>
+                      <button 
+                        type="button"
                         className="delete-proj-btn" 
-                        onClick={() => deleteProject(proj.id)}
+                        onClick={() => handleDeleteProject(proj)}
+                        style={{ padding: '8px 12px', fontSize: '0.75rem', flex: 1, justifyContent: 'center' }}
                       >
                         <Trash2 size={14} />
-                        <span>REMOVE PRODUCT</span>
+                        <span>REMOVE</span>
                       </button>
                     </div>
                   </div>

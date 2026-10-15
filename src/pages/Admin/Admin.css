@@ -257,6 +257,21 @@
   gap: 10px;
 }
 
+.edit-chip-btn {
+  background: transparent;
+  border: none;
+  color: var(--gold-light);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.edit-chip-btn:hover {
+  color: #fff;
+  transform: scale(1.15);
+}
+
 .delete-chip-btn {
   background: transparent;
   border: none;
@@ -264,6 +279,12 @@
   cursor: pointer;
   display: flex;
   align-items: center;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.delete-chip-btn:hover {
+  color: #ff6b6b;
+  transform: scale(1.15);
 }
 
 .admin-grid-2 {
