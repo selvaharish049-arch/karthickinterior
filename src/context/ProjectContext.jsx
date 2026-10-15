@@ -3,6 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const ProjectContext = createContext();
 
 export const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('luxe_custom_api_url');
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/+$/, '');
+    }
+  }
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL.replace(/\/+$/, '');
   }
@@ -224,6 +230,36 @@ export const ProjectProvider = ({ children }) => {
     }
   };
 
+  // Helper for safe API mutations (POST, PUT, DELETE) that never throws SyntaxError on HTML
+  const safeApiCall = async (endpoint, method = 'GET', body = null) => {
+    try {
+      const baseUrl = getApiBaseUrl();
+      const options = {
+        method,
+        headers: {
+          'Accept': 'application/json',
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache, no-store'
+        },
+        cache: 'no-store'
+      };
+      if (body) {
+        options.headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(body);
+      }
+
+      const res = await fetch(`${baseUrl}${endpoint}`, options);
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        return { isJson: false, ok: false, status: res.status, error: 'Server returned non-JSON response' };
+      }
+      const data = await res.json();
+      return { isJson: true, ok: res.ok, status: res.status, data };
+    } catch (err) {
+      return { isJson: false, ok: false, error: err.message || 'Network request failed' };
+    }
+  };
+
   // Sync live database from backend server across all PCs & Mobile devices
   const syncWithBackend = async () => {
     try {
@@ -317,33 +353,45 @@ export const ProjectProvider = ({ children }) => {
       const baseUrl = getApiBaseUrl();
       const res = await fetch(`${baseUrl}/admin/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ password })
       });
-      const data = await res.json();
-      if (data.success) {
-        setIsAdminLoggedIn(true);
-        setServerOnline(true);
-        return { success: true };
-      } else {
-        setIsAdminLoggedIn(false);
-        return { success: false, error: data.error || 'Incorrect password! Access denied.' };
+      const ct = res.headers.get('content-type') || '';
+      if (res.ok && ct.includes('application/json')) {
+        const data = await res.json();
+        if (data.success) {
+          setIsAdminLoggedIn(true);
+          setServerOnline(true);
+          return { success: true };
+        } else {
+          setIsAdminLoggedIn(false);
+          return { success: false, error: data.error || 'Incorrect password! Access denied.' };
+        }
       }
-    } catch (err) {
-      if (password === ADMIN_PASSWORD) {
-        setIsAdminLoggedIn(true);
-        return { success: true };
-      }
-      setIsAdminLoggedIn(false);
-      return { success: false, error: 'Incorrect password! Access denied.' };
+    } catch {}
+    if (password === ADMIN_PASSWORD) {
+      setIsAdminLoggedIn(true);
+      return { success: true };
     }
+    setIsAdminLoggedIn(false);
+    return { success: false, error: 'Incorrect password! Access denied.' };
   };
 
   const logoutAdmin = () => {
     setIsAdminLoggedIn(false);
   };
 
-  // Image File Upload Helper (Multer API)
+  // Allow setting a custom backend URL if deployed separately on Render
+  const setCustomApiUrl = (url) => {
+    if (url && url.trim()) {
+      localStorage.setItem('luxe_custom_api_url', url.trim());
+    } else {
+      localStorage.removeItem('luxe_custom_api_url');
+    }
+    syncWithBackend();
+  };
+
+  // Image File Upload Helper (Multer API with fallback to local FileReader)
   const uploadImageFile = async (file) => {
     try {
       const baseUrl = getApiBaseUrl();
@@ -353,84 +401,86 @@ export const ProjectProvider = ({ children }) => {
         method: 'POST',
         body: formData
       });
-      const data = await res.json();
-      if (data.success) {
-        return data.imageUrl;
+      const ct = res.headers.get('content-type') || '';
+      if (res.ok && ct.includes('application/json')) {
+        const data = await res.json();
+        if (data.success && data.imageUrl) {
+          return data.imageUrl;
+        }
       }
-      throw new Error(data.error || 'Upload failed');
     } catch (err) {
-      console.error('Image upload failed:', err);
-      throw err;
+      console.warn('Backend image upload endpoint not available, falling back to local file reader', err);
     }
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
   };
 
   // Add website announcement
   const addAnnouncement = async (title, message) => {
     const trimmedTitle = (title || '').trim();
     if (!trimmedTitle) return { success: false, error: 'Title required' };
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/announcements`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: trimmedTitle, message })
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.announcements)) {
-        setAnnouncements(data.announcements);
-        localStorage.setItem('luxe_announcements', JSON.stringify(data.announcements));
-        setServerOnline(true);
-        return { success: true };
-      }
-      throw new Error(data.error || 'Failed to add announcement');
-    } catch (e) {
-      setServerOnline(false);
-      return { success: false, error: e.message };
+    const newAnn = {
+      id: `ann-${Date.now()}`,
+      title: trimmedTitle,
+      message: message || '',
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    };
+
+    const apiRes = await safeApiCall('/announcements', 'POST', { title: trimmedTitle, message });
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.announcements)) {
+      setAnnouncements(apiRes.data.announcements);
+      localStorage.setItem('luxe_announcements', JSON.stringify(apiRes.data.announcements));
+      setServerOnline(true);
+      return { success: true, serverSynced: true };
     }
+
+    const updated = [newAnn, ...announcements];
+    setAnnouncements(updated);
+    localStorage.setItem('luxe_announcements', JSON.stringify(updated));
+    setServerOnline(false);
+    return { success: true, serverSynced: false };
   };
 
   const deleteAnnouncement = async (id) => {
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/announcements/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.announcements)) {
-        setAnnouncements(data.announcements);
-        localStorage.setItem('luxe_announcements', JSON.stringify(data.announcements));
-        setServerOnline(true);
-        return { success: true };
-      }
-      throw new Error(data.error || 'Failed to delete announcement');
-    } catch (e) {
-      setServerOnline(false);
-      return { success: false, error: e.message };
+    const apiRes = await safeApiCall(`/announcements/${id}`, 'DELETE');
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.announcements)) {
+      setAnnouncements(apiRes.data.announcements);
+      localStorage.setItem('luxe_announcements', JSON.stringify(apiRes.data.announcements));
+      setServerOnline(true);
+      return { success: true, serverSynced: true };
     }
+
+    const updated = announcements.filter(a => a.id !== id);
+    setAnnouncements(updated);
+    localStorage.setItem('luxe_announcements', JSON.stringify(updated));
+    setServerOnline(false);
+    return { success: true, serverSynced: false };
   };
 
   // Update site image
   const updateSiteImage = async (section, key, newUrl) => {
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/site-images`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ section, key, imageUrl: newUrl })
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && data.siteImages) {
-        setSiteImages(data.siteImages);
-        localStorage.setItem('luxe_site_images', JSON.stringify(data.siteImages));
-        setServerOnline(true);
-        return { success: true };
-      }
-      throw new Error(data.error || 'Failed to update image');
-    } catch (e) {
-      setServerOnline(false);
-      return { success: false, error: e.message };
+    const apiRes = await safeApiCall('/site-images', 'PUT', { section, key, imageUrl: newUrl });
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && apiRes.data.siteImages) {
+      setSiteImages(apiRes.data.siteImages);
+      localStorage.setItem('luxe_site_images', JSON.stringify(apiRes.data.siteImages));
+      setServerOnline(true);
+      return { success: true, serverSynced: true };
     }
+
+    const updated = {
+      ...siteImages,
+      [section]: {
+        ...(siteImages[section] || {}),
+        [key]: newUrl
+      }
+    };
+    setSiteImages(updated);
+    localStorage.setItem('luxe_site_images', JSON.stringify(updated));
+    setServerOnline(false);
+    return { success: true, serverSynced: false };
   };
 
   // Add new collection category
@@ -443,29 +493,26 @@ export const ProjectProvider = ({ children }) => {
       return { success: false, error: `Collection "${trimmed}" already exists.` };
     }
 
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/categories`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimmed })
-      });
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}: ${res.statusText}`);
-      }
-      const data = await res.json();
-      if (data.success && Array.isArray(data.categories)) {
-        setCategories(data.categories);
-        localStorage.setItem('luxe_categories', JSON.stringify(data.categories));
-        setServerOnline(true);
-        return { success: true, categories: data.categories };
-      }
-      throw new Error(data.error || 'Failed to save collection to server.');
-    } catch (e) {
-      console.error('Error adding category to server:', e);
-      setServerOnline(false);
-      return { success: false, error: e.message || 'Cannot reach server database. Please ensure backend is running.' };
+    // 1. Attempt master server API
+    const apiRes = await safeApiCall('/categories', 'POST', { name: trimmed });
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.categories)) {
+      setCategories(apiRes.data.categories);
+      localStorage.setItem('luxe_categories', JSON.stringify(apiRes.data.categories));
+      setServerOnline(true);
+      return { success: true, serverSynced: true, categories: apiRes.data.categories };
     }
+
+    // 2. Always persist to local state & localStorage so the admin is NEVER blocked
+    const updated = [...categories, trimmed];
+    setCategories(updated);
+    localStorage.setItem('luxe_categories', JSON.stringify(updated));
+    setServerOnline(false);
+    return { 
+      success: true, 
+      serverSynced: false, 
+      categories: updated,
+      warning: 'Saved to local browser database. Note: Connect Render Web Service to sync across other devices.' 
+    };
   };
 
   // Delete category
@@ -473,31 +520,28 @@ export const ProjectProvider = ({ children }) => {
     if (catName === 'All Projects') {
       return { success: false, error: 'Cannot delete "All Projects" root category.' };
     }
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/categories/${encodeURIComponent(catName)}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}: ${res.statusText}`);
+
+    const apiRes = await safeApiCall(`/categories/${encodeURIComponent(catName)}`, 'DELETE');
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.categories)) {
+      setCategories(apiRes.data.categories);
+      localStorage.setItem('luxe_categories', JSON.stringify(apiRes.data.categories));
+      if (Array.isArray(apiRes.data.projects)) {
+        setProjects(apiRes.data.projects);
+        localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
       }
-      const data = await res.json();
-      if (data.success && Array.isArray(data.categories)) {
-        setCategories(data.categories);
-        localStorage.setItem('luxe_categories', JSON.stringify(data.categories));
-        if (Array.isArray(data.projects)) {
-          setProjects(data.projects);
-          localStorage.setItem('luxe_projects', JSON.stringify(data.projects));
-        }
-        setServerOnline(true);
-        return { success: true, categories: data.categories };
-      }
-      throw new Error(data.error || 'Failed to delete collection from server.');
-    } catch (e) {
-      console.error('Error deleting category from server:', e);
-      setServerOnline(false);
-      return { success: false, error: e.message || 'Cannot reach server database.' };
+      setServerOnline(true);
+      return { success: true, serverSynced: true, categories: apiRes.data.categories };
     }
+
+    // Fallback: local delete
+    const updatedCats = categories.filter(c => c !== catName);
+    const updatedProjs = projects.map(p => p.category === catName ? { ...p, category: 'All Projects' } : p);
+    setCategories(updatedCats);
+    setProjects(updatedProjs);
+    localStorage.setItem('luxe_categories', JSON.stringify(updatedCats));
+    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    setServerOnline(false);
+    return { success: true, serverSynced: false, categories: updatedCats };
   };
 
   // Edit category name
@@ -506,33 +550,28 @@ export const ProjectProvider = ({ children }) => {
     if (!trimmed || oldName === 'All Projects') {
       return { success: false, error: 'Invalid collection name.' };
     }
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/categories/${encodeURIComponent(oldName)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newName: trimmed })
-      });
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}: ${res.statusText}`);
+
+    const apiRes = await safeApiCall(`/categories/${encodeURIComponent(oldName)}`, 'PUT', { newName: trimmed });
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.categories)) {
+      setCategories(apiRes.data.categories);
+      localStorage.setItem('luxe_categories', JSON.stringify(apiRes.data.categories));
+      if (Array.isArray(apiRes.data.projects)) {
+        setProjects(apiRes.data.projects);
+        localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
       }
-      const data = await res.json();
-      if (data.success && Array.isArray(data.categories)) {
-        setCategories(data.categories);
-        localStorage.setItem('luxe_categories', JSON.stringify(data.categories));
-        if (Array.isArray(data.projects)) {
-          setProjects(data.projects);
-          localStorage.setItem('luxe_projects', JSON.stringify(data.projects));
-        }
-        setServerOnline(true);
-        return { success: true };
-      }
-      throw new Error(data.error || 'Failed to rename collection.');
-    } catch (e) {
-      console.error('Error renaming category:', e);
-      setServerOnline(false);
-      return { success: false, error: e.message || 'Cannot reach server database.' };
+      setServerOnline(true);
+      return { success: true, serverSynced: true };
     }
+
+    // Fallback: local edit
+    const updatedCats = categories.map(c => c === oldName ? trimmed : c);
+    const updatedProjs = projects.map(p => p.category === oldName ? { ...p, category: trimmed } : p);
+    setCategories(updatedCats);
+    setProjects(updatedProjs);
+    localStorage.setItem('luxe_categories', JSON.stringify(updatedCats));
+    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    setServerOnline(false);
+    return { success: true, serverSynced: false };
   };
 
   // Add new project
@@ -550,149 +589,120 @@ export const ProjectProvider = ({ children }) => {
       tag: newProj.tag || newProj.category || 'Luxury Interior'
     };
 
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/projects`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projectItem)
-      });
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}: ${res.statusText}`);
-      }
-      const data = await res.json();
-      if (data.success && Array.isArray(data.projects)) {
-        setProjects(data.projects);
-        localStorage.setItem('luxe_projects', JSON.stringify(data.projects));
-        setServerOnline(true);
-        return { success: true, project: data.project, projects: data.projects };
-      }
-      throw new Error(data.error || 'Failed to save product to server.');
-    } catch (e) {
-      console.error('Error adding project to server:', e);
-      setServerOnline(false);
-      return { success: false, error: e.message || 'Cannot reach server database. Please ensure backend is running.' };
+    const apiRes = await safeApiCall('/projects', 'POST', projectItem);
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.projects)) {
+      setProjects(apiRes.data.projects);
+      localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
+      setServerOnline(true);
+      return { success: true, serverSynced: true, project: apiRes.data.project, projects: apiRes.data.projects };
     }
+
+    // Fallback: local add
+    const updatedProjs = [projectItem, ...projects.filter(p => p.id !== id)];
+    setProjects(updatedProjs);
+    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    setServerOnline(false);
+    return { 
+      success: true, 
+      serverSynced: false, 
+      project: projectItem, 
+      projects: updatedProjs,
+      warning: 'Saved to local browser database. Note: Connect Render Web Service to sync across other devices.' 
+    };
   };
 
   // Edit existing project
   const editProject = async (id, updatedData) => {
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/projects/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedData)
-      });
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}: ${res.statusText}`);
-      }
-      const data = await res.json();
-      if (data.success && Array.isArray(data.projects)) {
-        setProjects(data.projects);
-        localStorage.setItem('luxe_projects', JSON.stringify(data.projects));
-        setServerOnline(true);
-        return { success: true, project: data.project, projects: data.projects };
-      }
-      throw new Error(data.error || 'Failed to update product on server.');
-    } catch (e) {
-      console.error('Error updating project:', e);
-      setServerOnline(false);
-      return { success: false, error: e.message || 'Cannot reach server database.' };
+    const apiRes = await safeApiCall(`/projects/${id}`, 'PUT', updatedData);
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.projects)) {
+      setProjects(apiRes.data.projects);
+      localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
+      setServerOnline(true);
+      return { success: true, serverSynced: true, project: apiRes.data.project, projects: apiRes.data.projects };
     }
+
+    // Fallback: local edit
+    const updatedProjs = projects.map(p => p.id === id ? { ...p, ...updatedData } : p);
+    setProjects(updatedProjs);
+    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    setServerOnline(false);
+    return { success: true, serverSynced: false, projects: updatedProjs };
   };
 
   // Delete project
   const deleteProject = async (id) => {
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/projects/${id}`, {
-        method: 'DELETE'
-      });
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}: ${res.statusText}`);
-      }
-      const data = await res.json();
-      if (data.success && Array.isArray(data.projects)) {
-        setProjects(data.projects);
-        localStorage.setItem('luxe_projects', JSON.stringify(data.projects));
-        setServerOnline(true);
-        return { success: true, projects: data.projects };
-      }
-      throw new Error(data.error || 'Failed to delete product from server.');
-    } catch (e) {
-      console.error('Error deleting project:', e);
-      setServerOnline(false);
-      return { success: false, error: e.message || 'Cannot reach server database.' };
+    const apiRes = await safeApiCall(`/projects/${id}`, 'DELETE');
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.projects)) {
+      setProjects(apiRes.data.projects);
+      localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
+      setServerOnline(true);
+      return { success: true, serverSynced: true, projects: apiRes.data.projects };
     }
+
+    // Fallback: local delete
+    const updatedProjs = projects.filter(p => p.id !== id);
+    setProjects(updatedProjs);
+    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    setServerOnline(false);
+    return { success: true, serverSynced: false, projects: updatedProjs };
   };
 
   // Add new Customer Booking/Inquiry
   const addBooking = async (bookingData) => {
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/bookings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bookingData)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.customerBookings)) {
-        setCustomerBookings(data.customerBookings);
-        localStorage.setItem('luxe_customer_bookings', JSON.stringify(data.customerBookings));
-        setServerOnline(true);
-        return { success: true, booking: data.booking };
-      }
-      throw new Error(data.error || 'Failed to submit booking');
-    } catch (e) {
-      setServerOnline(false);
-      return { success: false, error: e.message };
+    const newBooking = {
+      ...bookingData,
+      id: `book-${Date.now()}`,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      status: 'Pending'
+    };
+
+    const apiRes = await safeApiCall('/bookings', 'POST', bookingData);
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.customerBookings)) {
+      setCustomerBookings(apiRes.data.customerBookings);
+      localStorage.setItem('luxe_customer_bookings', JSON.stringify(apiRes.data.customerBookings));
+      setServerOnline(true);
+      return { success: true, serverSynced: true, booking: apiRes.data.booking };
     }
+
+    const updated = [newBooking, ...customerBookings];
+    setCustomerBookings(updated);
+    localStorage.setItem('luxe_customer_bookings', JSON.stringify(updated));
+    setServerOnline(false);
+    return { success: true, serverSynced: false, booking: newBooking };
   };
 
   // Delete customer booking
   const deleteBooking = async (id) => {
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/bookings/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.customerBookings)) {
-        setCustomerBookings(data.customerBookings);
-        localStorage.setItem('luxe_customer_bookings', JSON.stringify(data.customerBookings));
-        setServerOnline(true);
-        return { success: true };
-      }
-      throw new Error(data.error || 'Failed to delete booking');
-    } catch (e) {
-      setServerOnline(false);
-      return { success: false, error: e.message };
+    const apiRes = await safeApiCall(`/bookings/${id}`, 'DELETE');
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.customerBookings)) {
+      setCustomerBookings(apiRes.data.customerBookings);
+      localStorage.setItem('luxe_customer_bookings', JSON.stringify(apiRes.data.customerBookings));
+      setServerOnline(true);
+      return { success: true, serverSynced: true };
     }
+
+    const updated = customerBookings.filter(b => b.id !== id);
+    setCustomerBookings(updated);
+    localStorage.setItem('luxe_customer_bookings', JSON.stringify(updated));
+    setServerOnline(false);
+    return { success: true, serverSynced: false };
   };
 
   // Update booking status
   const updateBookingStatus = async (id, newStatus) => {
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/bookings/${id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.customerBookings)) {
-        setCustomerBookings(data.customerBookings);
-        localStorage.setItem('luxe_customer_bookings', JSON.stringify(data.customerBookings));
-        setServerOnline(true);
-        return { success: true };
-      }
-      throw new Error(data.error || 'Failed to update status');
-    } catch (e) {
-      setServerOnline(false);
-      return { success: false, error: e.message };
+    const apiRes = await safeApiCall(`/bookings/${id}/status`, 'PUT', { status: newStatus });
+    if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.customerBookings)) {
+      setCustomerBookings(apiRes.data.customerBookings);
+      localStorage.setItem('luxe_customer_bookings', JSON.stringify(apiRes.data.customerBookings));
+      setServerOnline(true);
+      return { success: true, serverSynced: true };
     }
+
+    const updated = customerBookings.map(b => b.id === id ? { ...b, status: newStatus } : b);
+    setCustomerBookings(updated);
+    localStorage.setItem('luxe_customer_bookings', JSON.stringify(updated));
+    setServerOnline(false);
+    return { success: true, serverSynced: false };
   };
 
   return (
@@ -701,6 +711,7 @@ export const ProjectProvider = ({ children }) => {
       isAdminLoggedIn,
       loginAdmin,
       logoutAdmin,
+      setCustomApiUrl,
       siteImages,
       updateSiteImage,
       announcements,

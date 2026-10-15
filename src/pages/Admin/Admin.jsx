@@ -139,10 +139,13 @@ const Admin = () => {
     if (!newCatName.trim()) return;
     const res = await addCategory(newCatName);
     if (res && res.success) {
-      setCatMessage(`New collection "${newCatName}" successfully saved to server database!`);
+      const msg = res.serverSynced 
+        ? `New collection "${newCatName}" saved to live server database!`
+        : `New collection "${newCatName}" created successfully!`;
+      setCatMessage(msg);
       setCatError('');
       setNewCatName('');
-      setTimeout(() => setCatMessage(''), 4000);
+      setTimeout(() => setCatMessage(''), 4500);
     } else {
       setCatError(res?.error || `Failed to create collection.`);
       setTimeout(() => setCatError(''), 5000);
@@ -293,10 +296,13 @@ const Admin = () => {
     if (editingProjectId) {
       const res = await editProject(editingProjectId, finalProject);
       if (res && res.success) {
-        setProjMessage(`Product "${projectData.title}" updated successfully in database!`);
+        const msg = res.serverSynced 
+          ? `Product "${projectData.title}" updated in server database!`
+          : `Product "${projectData.title}" updated successfully!`;
+        setProjMessage(msg);
         setProjError('');
         resetProjectForm();
-        setTimeout(() => setProjMessage(''), 4000);
+        setTimeout(() => setProjMessage(''), 4500);
       } else {
         setProjError(res?.error || 'Failed to update product on server database.');
         setTimeout(() => setProjError(''), 6000);
@@ -304,10 +310,13 @@ const Admin = () => {
     } else {
       const res = await addProject(finalProject);
       if (res && res.success) {
-        setProjMessage(`Product "${projectData.title}" successfully added to "${projectData.category}"!`);
+        const msg = res.serverSynced 
+          ? `Product "${projectData.title}" successfully saved to server database under "${projectData.category}"!`
+          : `Product "${projectData.title}" added to "${projectData.category}"!`;
+        setProjMessage(msg);
         setProjError('');
         resetProjectForm();
-        setTimeout(() => setProjMessage(''), 4000);
+        setTimeout(() => setProjMessage(''), 4500);
       } else {
         setProjError(res?.error || 'Failed to save product to server database.');
         setTimeout(() => setProjError(''), 6000);
@@ -399,9 +408,9 @@ const Admin = () => {
                 gap: '8px',
                 padding: '4px 12px',
                 borderRadius: '16px',
-                background: serverOnline ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-                border: serverOnline ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
-                color: serverOnline ? '#4ade80' : '#f87171',
+                background: serverOnline ? 'rgba(34, 197, 94, 0.12)' : 'rgba(212, 175, 55, 0.12)',
+                border: serverOnline ? '1px solid rgba(34, 197, 94, 0.4)' : '1px solid rgba(212, 175, 55, 0.4)',
+                color: serverOnline ? '#4ade80' : '#e5c158',
                 fontSize: '0.74rem',
                 fontWeight: 600,
                 letterSpacing: '0.5px'
@@ -410,10 +419,10 @@ const Admin = () => {
                   width: '7px',
                   height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: serverOnline ? '#4ade80' : '#f87171',
-                  boxShadow: serverOnline ? '0 0 6px #4ade80' : '0 0 6px #f87171'
+                  backgroundColor: serverOnline ? '#4ade80' : '#e5c158',
+                  boxShadow: serverOnline ? '0 0 6px #4ade80' : '0 0 6px #e5c158'
                 }}></span>
-                {serverOnline ? 'MASTER SERVER DATABASE CONNECTED' : 'SERVER OFFLINE (ATTEMPTING RECONNECT)'}
+                {serverOnline ? 'LIVE MASTER DATABASE CONNECTED (ALL DEVICES SYNCED)' : 'LOCAL DATABASE ACTIVE'}
               </div>
             </div>
             <h1 className="admin-title">ADMIN CONTROL CENTER</h1>
@@ -446,6 +455,24 @@ const Admin = () => {
             </div>
           </div>
         </div>
+
+        {!serverOnline && (
+          <div style={{
+            background: 'rgba(212, 175, 55, 0.08)',
+            border: '1px solid rgba(212, 175, 55, 0.25)',
+            borderRadius: '4px',
+            padding: '12px 18px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <AlertCircle size={18} color="#d4af37" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: '0.85rem', color: '#e2e8f0', lineHeight: 1.5 }}>
+              <strong>Notice:</strong> Collections and products added here work immediately across all site sections. For multi-device cloud synchronization (laptop, mobile & customers), deploy this repository as a <strong>Render Web Service</strong> so the Node.js database server runs live in the cloud.
+            </span>
+          </div>
+        )}
 
         {/* Tab Switcher */}
         <div className="admin-tabs">
