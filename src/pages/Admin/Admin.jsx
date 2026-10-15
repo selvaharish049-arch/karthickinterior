@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useProjects } from '../../context/ProjectContext';
+import { useProjects, getApiBaseUrl } from '../../context/ProjectContext';
 import { 
   PlusCircle, 
   FolderPlus, 
@@ -25,7 +25,10 @@ import {
   Send,
   Package,
   AlertCircle,
-  Edit3
+  Edit3,
+  Server,
+  RefreshCw,
+  Database
 } from 'lucide-react';
 import './Admin.css';
 
@@ -35,6 +38,7 @@ const Admin = () => {
     isAdminLoggedIn,
     loginAdmin,
     logoutAdmin,
+    setCustomApiUrl,
     siteImages,
     updateSiteImage,
     announcements,
@@ -51,12 +55,63 @@ const Admin = () => {
     deleteProject,
     deleteBooking,
     updateBookingStatus,
-    uploadImageFile
+    uploadImageFile,
+    syncWithBackend
   } = useProjects();
 
   const [inputPassword, setInputPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [activeTab, setActiveTab] = useState('bookings'); // 'create-category', 'create-project', 'view-catalog', 'bookings', 'site-images'
+  const [activeTab, setActiveTab] = useState('bookings'); // 'create-category', 'create-project', 'view-catalog', 'bookings', 'site-images', 'diagnostics'
+
+  // Diagnostic & Connection State
+  const [customUrlInput, setCustomUrlInput] = useState(() => {
+    return localStorage.getItem('luxe_custom_api_url') || '';
+  });
+  const [syncTestMessage, setSyncTestMessage] = useState('');
+  const [syncTestLoading, setSyncTestLoading] = useState(false);
+
+  const handleTestConnection = async () => {
+    setSyncTestLoading(true);
+    setSyncTestMessage('');
+    try {
+      const baseUrl = getApiBaseUrl();
+      const testRes = await fetch(`${baseUrl}/health?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+      const ct = testRes.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        setSyncTestMessage(`Error: Server returned non-JSON response (${ct || 'HTML'}). If hosted on Render, ensure it is deployed as a Web Service (Node.js) using node backend/server.js.`);
+        setSyncTestLoading(false);
+        return;
+      }
+      const data = await testRes.json();
+      if (data && data.success) {
+        if (syncWithBackend) await syncWithBackend();
+        setSyncTestMessage(`Success: Connected to ${baseUrl}! Cloud database synchronized across all devices.`);
+      } else {
+        setSyncTestMessage(`Server responded with status: ${JSON.stringify(data)}`);
+      }
+    } catch (err) {
+      setSyncTestMessage(`Connection failed: ${err.message}. Check if your backend server is running and accessible.`);
+    } finally {
+      setSyncTestLoading(false);
+    }
+  };
+
+  const handleSaveCustomUrl = (e) => {
+    e.preventDefault();
+    if (setCustomApiUrl) setCustomApiUrl(customUrlInput);
+    handleTestConnection();
+  };
+
+  const handleResetCustomUrl = () => {
+    setCustomUrlInput('');
+    if (setCustomApiUrl) setCustomApiUrl('');
+    setTimeout(() => {
+      handleTestConnection();
+    }, 200);
+  };
 
   // Announcement Form State
   const [annTitle, setAnnTitle] = useState('');
@@ -139,16 +194,13 @@ const Admin = () => {
     if (!newCatName.trim()) return;
     const res = await addCategory(newCatName);
     if (res && res.success) {
-      const msg = res.serverSynced 
-        ? `New collection "${newCatName}" saved to live server database!`
-        : `New collection "${newCatName}" created successfully!`;
-      setCatMessage(msg);
+      setCatMessage(res.message || `New collection "${newCatName}" saved permanently to shared production database!`);
       setCatError('');
       setNewCatName('');
-      setTimeout(() => setCatMessage(''), 4500);
+      setTimeout(() => setCatMessage(''), 5000);
     } else {
       setCatError(res?.error || `Failed to create collection.`);
-      setTimeout(() => setCatError(''), 5000);
+      setTimeout(() => setCatError(''), 7000);
     }
   };
 
@@ -157,12 +209,12 @@ const Admin = () => {
     if (newName && newName.trim() && newName.trim() !== cat) {
       const res = await editCategory(cat, newName.trim());
       if (res && res.success) {
-        setCatMessage(`Collection renamed to "${newName.trim()}"!`);
+        setCatMessage(res.message || `Collection renamed to "${newName.trim()}" in shared production database!`);
         setCatError('');
-        setTimeout(() => setCatMessage(''), 4000);
+        setTimeout(() => setCatMessage(''), 5000);
       } else {
         setCatError(res?.error || 'Failed to rename collection on server.');
-        setTimeout(() => setCatError(''), 5000);
+        setTimeout(() => setCatError(''), 7000);
       }
     }
   };
@@ -171,12 +223,12 @@ const Admin = () => {
     if (window.confirm(`Are you sure you want to delete the collection "${cat}"? Products in it will be moved to "All Projects".`)) {
       const res = await deleteCategory(cat);
       if (res && res.success) {
-        setCatMessage(`Collection "${cat}" deleted from server database.`);
+        setCatMessage(res.message || `Collection "${cat}" deleted from shared production database.`);
         setCatError('');
-        setTimeout(() => setCatMessage(''), 4000);
+        setTimeout(() => setCatMessage(''), 5000);
       } else {
         setCatError(res?.error || 'Failed to delete collection from server.');
-        setTimeout(() => setCatError(''), 5000);
+        setTimeout(() => setCatError(''), 7000);
       }
     }
   };
@@ -264,9 +316,9 @@ const Admin = () => {
     if (window.confirm(`Are you sure you want to permanently delete "${proj.title}" from the master database?`)) {
       const res = await deleteProject(proj.id);
       if (res && res.success) {
-        setProjMessage(`Product "${proj.title}" deleted successfully.`);
+        setProjMessage(res.message || `Product "${proj.title}" deleted from shared production database.`);
         setProjError('');
-        setTimeout(() => setProjMessage(''), 4000);
+        setTimeout(() => setProjMessage(''), 5000);
       } else {
         alert(res?.error || 'Failed to delete product from database.');
       }
@@ -296,30 +348,24 @@ const Admin = () => {
     if (editingProjectId) {
       const res = await editProject(editingProjectId, finalProject);
       if (res && res.success) {
-        const msg = res.serverSynced 
-          ? `Product "${projectData.title}" updated in server database!`
-          : `Product "${projectData.title}" updated successfully!`;
-        setProjMessage(msg);
+        setProjMessage(res.message || `Product "${projectData.title}" updated in shared production database!`);
         setProjError('');
         resetProjectForm();
-        setTimeout(() => setProjMessage(''), 4500);
+        setTimeout(() => setProjMessage(''), 5000);
       } else {
         setProjError(res?.error || 'Failed to update product on server database.');
-        setTimeout(() => setProjError(''), 6000);
+        setTimeout(() => setProjError(''), 7000);
       }
     } else {
       const res = await addProject(finalProject);
       if (res && res.success) {
-        const msg = res.serverSynced 
-          ? `Product "${projectData.title}" successfully saved to server database under "${projectData.category}"!`
-          : `Product "${projectData.title}" added to "${projectData.category}"!`;
-        setProjMessage(msg);
+        setProjMessage(res.message || `Product "${projectData.title}" successfully saved to shared production database!`);
         setProjError('');
         resetProjectForm();
-        setTimeout(() => setProjMessage(''), 4500);
+        setTimeout(() => setProjMessage(''), 5000);
       } else {
         setProjError(res?.error || 'Failed to save product to server database.');
-        setTimeout(() => setProjError(''), 6000);
+        setTimeout(() => setProjError(''), 7000);
       }
     }
   };
@@ -514,6 +560,14 @@ const Admin = () => {
           >
             <ImageIcon size={18} />
             <span>5. SITE IMAGES MANAGER</span>
+          </button>
+
+          <button 
+            className={`admin-tab-btn ${activeTab === 'diagnostics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('diagnostics')}
+          >
+            <Server size={18} />
+            <span>6. DATABASE & CLOUD SYNC</span>
           </button>
         </div>
 
@@ -1213,6 +1267,124 @@ const Admin = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: DATABASE & CLOUD SYNC DIAGNOSTICS */}
+        {activeTab === 'diagnostics' && (
+          <div className="admin-card">
+            <div className="card-top-header">
+              <Server size={22} className="gold-icon" />
+              <h2>DATABASE & MULTI-DEVICE CLOUD SYNCHRONIZATION</h2>
+            </div>
+            <p className="admin-card-desc">
+              Monitor persistent cloud storage, verify connection across Laptop & Mobile, or configure a custom backend API URL.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '25px' }}>
+              <div style={{ background: '#0a0b0d', border: `1px solid ${serverOnline ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`, padding: '20px', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: serverOnline ? '#22c55e' : '#ef4444', boxShadow: serverOnline ? '0 0 10px #22c55e' : '0 0 10px #ef4444' }}></span>
+                  <h4 style={{ color: '#ffffff', margin: 0, fontSize: '1rem' }}>
+                    {serverOnline ? 'Cloud Database Connected' : 'Server Disconnected (Local Only)'}
+                  </h4>
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 12px', lineHeight: 1.5 }}>
+                  {serverOnline 
+                    ? 'All collections and products added on this laptop are permanently synchronized to the shared database. Mobile browsers and new visitors see identical data.'
+                    : 'Backend API is returning HTML or unreachable. If running on Render, deploy as a "Web Service" using node backend/server.js.'}
+                </p>
+                <div style={{ fontSize: '0.8rem', color: 'var(--gold-light)' }}>
+                  Active API Endpoint: <strong style={{ color: '#ffffff', wordBreak: 'break-all' }}>{getApiBaseUrl()}</strong>
+                </div>
+              </div>
+
+              <div style={{ background: '#0a0b0d', border: '1px solid rgba(255,255,255,0.1)', padding: '20px', borderRadius: '6px' }}>
+                <h4 style={{ color: '#ffffff', margin: '0 0 10px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Database size={16} color="#d4af37" />
+                  Live Database Counters
+                </h4>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                  <div>
+                    <div style={{ color: 'var(--gold-light)', fontSize: '1.4rem', fontWeight: 700 }}>{categories.length - 1}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Collections</div>
+                  </div>
+                  <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '20px' }}>
+                    <div style={{ color: 'var(--gold-light)', fontSize: '1.4rem', fontWeight: 700 }}>{projects.length}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Products</div>
+                  </div>
+                  <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '20px' }}>
+                    <div style={{ color: 'var(--gold-light)', fontSize: '1.4rem', fontWeight: 700 }}>{customerBookings.length}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Inquiries</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleTestConnection}
+                  disabled={syncTestLoading}
+                  className="gold-btn btn-sm"
+                  style={{ marginTop: '16px', width: '100%', justifyContent: 'center' }}
+                >
+                  <RefreshCw size={14} style={syncTestLoading ? { animation: 'spin 1s linear infinite' } : {}} />
+                  <span>{syncTestLoading ? 'Testing API...' : 'Test Connection & Sync Now'}</span>
+                </button>
+              </div>
+            </div>
+
+            {syncTestMessage && (
+              <div style={{
+                background: syncTestMessage.startsWith('Success') ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                border: `1px solid ${syncTestMessage.startsWith('Success') ? '#22c55e' : '#ef4444'}`,
+                color: syncTestMessage.startsWith('Success') ? '#86efac' : '#fca5a5',
+                padding: '12px 16px',
+                borderRadius: '4px',
+                marginBottom: '20px',
+                fontSize: '0.85rem'
+              }}>
+                {syncTestMessage}
+              </div>
+            )}
+
+            {/* Custom Backend URL Form */}
+            <div style={{ background: '#0a0b0d', border: '1px solid rgba(212,175,55,0.2)', padding: '20px', borderRadius: '6px', marginBottom: '25px' }}>
+              <h4 style={{ color: '#ffffff', margin: '0 0 8px', fontSize: '0.95rem' }}>
+                Custom Backend API URL (Optional)
+              </h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '14px', lineHeight: 1.5 }}>
+                By default, the website auto-detects the API URL relative to the current domain (<code>/api</code>). If your Node.js backend is hosted on a separate URL (e.g. <code>https://your-backend.onrender.com/api</code>), you can specify it here.
+              </p>
+              <form onSubmit={handleSaveCustomUrl} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="https://your-backend.onrender.com/api"
+                  value={customUrlInput}
+                  onChange={(e) => setCustomUrlInput(e.target.value)}
+                  style={{ flex: 1, minWidth: '260px', padding: '10px 14px', background: '#14171d', border: '1px solid rgba(255,255,255,0.15)', color: '#ffffff', borderRadius: '4px', fontSize: '0.88rem' }}
+                />
+                <button type="submit" className="gold-btn-solid" style={{ padding: '10px 18px', fontSize: '0.82rem' }}>
+                  Save & Connect
+                </button>
+                {customUrlInput && (
+                  <button type="button" onClick={handleResetCustomUrl} className="gold-btn" style={{ padding: '10px 18px', fontSize: '0.82rem' }}>
+                    Reset to Default
+                  </button>
+                )}
+              </form>
+            </div>
+
+            {/* Render Deployment Checklist */}
+            <div style={{ background: 'rgba(212,175,55,0.05)', border: '1px solid rgba(212,175,55,0.25)', padding: '20px', borderRadius: '6px' }}>
+              <h4 style={{ color: 'var(--gold-light)', margin: '0 0 10px', fontSize: '0.95rem' }}>
+                Deploying as a Render Web Service (Cross-Device Database Persistence)
+              </h4>
+              <ol style={{ color: '#cbd5e1', fontSize: '0.85rem', lineHeight: '1.8', margin: 0, paddingLeft: '20px' }}>
+                <li>Log in to your <strong>Render Dashboard</strong> (render.com).</li>
+                <li>Ensure this project is running as a <strong>Web Service</strong> (NOT a Static Site), so Node.js Express can run and handle database storage.</li>
+                <li>Build Command: <code>npm install && npm run build</code></li>
+                <li>Start Command: <code>node backend/server.js</code></li>
+                <li>Health Check Path: <code>/api/health</code></li>
+              </ol>
             </div>
           </div>
         )}

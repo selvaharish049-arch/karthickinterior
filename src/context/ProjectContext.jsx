@@ -493,25 +493,25 @@ export const ProjectProvider = ({ children }) => {
       return { success: false, error: `Collection "${trimmed}" already exists.` };
     }
 
-    // 1. Attempt master server API
     const apiRes = await safeApiCall('/categories', 'POST', { name: trimmed });
     if (apiRes.isJson && apiRes.ok && apiRes.data && apiRes.data.success && Array.isArray(apiRes.data.categories)) {
       setCategories(apiRes.data.categories);
       localStorage.setItem('luxe_categories', JSON.stringify(apiRes.data.categories));
       setServerOnline(true);
-      return { success: true, serverSynced: true, categories: apiRes.data.categories };
+      return { 
+        success: true, 
+        message: `Collection "${trimmed}" saved permanently to shared production database!`, 
+        categories: apiRes.data.categories 
+      };
     }
 
-    // 2. Always persist to local state & localStorage so the admin is NEVER blocked
-    const updated = [...categories, trimmed];
-    setCategories(updated);
-    localStorage.setItem('luxe_categories', JSON.stringify(updated));
+    const targetUrl = `${getApiBaseUrl()}/categories`;
+    const errorDetail = apiRes.error || (apiRes.isJson ? apiRes.data?.error : 'Server returned non-JSON HTML (Static Site detected)');
+    console.error('[LUXE DB ERROR] Failed to save category to backend:', { targetUrl, apiRes });
     setServerOnline(false);
     return { 
-      success: true, 
-      serverSynced: false, 
-      categories: updated,
-      warning: 'Saved to local browser database. Note: Connect Render Web Service to sync across other devices.' 
+      success: false, 
+      error: `Could not save collection to production database (${errorDetail}). Target: ${targetUrl}. Please ensure Render Web Service is running.` 
     };
   };
 
@@ -530,18 +530,14 @@ export const ProjectProvider = ({ children }) => {
         localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
       }
       setServerOnline(true);
-      return { success: true, serverSynced: true, categories: apiRes.data.categories };
+      return { success: true, message: `Collection "${catName}" deleted from shared production database!`, categories: apiRes.data.categories };
     }
 
-    // Fallback: local delete
-    const updatedCats = categories.filter(c => c !== catName);
-    const updatedProjs = projects.map(p => p.category === catName ? { ...p, category: 'All Projects' } : p);
-    setCategories(updatedCats);
-    setProjects(updatedProjs);
-    localStorage.setItem('luxe_categories', JSON.stringify(updatedCats));
-    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    const targetUrl = `${getApiBaseUrl()}/categories/${encodeURIComponent(catName)}`;
+    const errorDetail = apiRes.error || 'Server unreachable or returned non-JSON';
+    console.error('[LUXE DB ERROR] Failed to delete category on backend:', { targetUrl, apiRes });
     setServerOnline(false);
-    return { success: true, serverSynced: false, categories: updatedCats };
+    return { success: false, error: `Could not delete collection from production database (${errorDetail}). Target: ${targetUrl}.` };
   };
 
   // Edit category name
@@ -560,18 +556,14 @@ export const ProjectProvider = ({ children }) => {
         localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
       }
       setServerOnline(true);
-      return { success: true, serverSynced: true };
+      return { success: true, message: `Collection renamed to "${trimmed}" in shared production database!` };
     }
 
-    // Fallback: local edit
-    const updatedCats = categories.map(c => c === oldName ? trimmed : c);
-    const updatedProjs = projects.map(p => p.category === oldName ? { ...p, category: trimmed } : p);
-    setCategories(updatedCats);
-    setProjects(updatedProjs);
-    localStorage.setItem('luxe_categories', JSON.stringify(updatedCats));
-    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    const targetUrl = `${getApiBaseUrl()}/categories`;
+    const errorDetail = apiRes.error || 'Server unreachable or returned non-JSON';
+    console.error('[LUXE DB ERROR] Failed to edit category on backend:', { targetUrl, apiRes });
     setServerOnline(false);
-    return { success: true, serverSynced: false };
+    return { success: false, error: `Could not rename collection in production database (${errorDetail}). Target: ${targetUrl}.` };
   };
 
   // Add new project
@@ -594,20 +586,21 @@ export const ProjectProvider = ({ children }) => {
       setProjects(apiRes.data.projects);
       localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
       setServerOnline(true);
-      return { success: true, serverSynced: true, project: apiRes.data.project, projects: apiRes.data.projects };
+      return { 
+        success: true, 
+        message: `Product "${projectItem.title}" saved permanently to shared production database!`, 
+        project: apiRes.data.project, 
+        projects: apiRes.data.projects 
+      };
     }
 
-    // Fallback: local add
-    const updatedProjs = [projectItem, ...projects.filter(p => p.id !== id)];
-    setProjects(updatedProjs);
-    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    const targetUrl = `${getApiBaseUrl()}/projects`;
+    const errorDetail = apiRes.error || (apiRes.isJson ? apiRes.data?.error : 'Server returned non-JSON HTML (Static Site detected)');
+    console.error('[LUXE DB ERROR] Failed to save project to backend:', { targetUrl, apiRes });
     setServerOnline(false);
     return { 
-      success: true, 
-      serverSynced: false, 
-      project: projectItem, 
-      projects: updatedProjs,
-      warning: 'Saved to local browser database. Note: Connect Render Web Service to sync across other devices.' 
+      success: false, 
+      error: `Could not save product to production database (${errorDetail}). Target: ${targetUrl}. Please ensure Render Web Service is running.` 
     };
   };
 
@@ -618,15 +611,14 @@ export const ProjectProvider = ({ children }) => {
       setProjects(apiRes.data.projects);
       localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
       setServerOnline(true);
-      return { success: true, serverSynced: true, project: apiRes.data.project, projects: apiRes.data.projects };
+      return { success: true, message: `Product updated in shared production database!`, project: apiRes.data.project, projects: apiRes.data.projects };
     }
 
-    // Fallback: local edit
-    const updatedProjs = projects.map(p => p.id === id ? { ...p, ...updatedData } : p);
-    setProjects(updatedProjs);
-    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    const targetUrl = `${getApiBaseUrl()}/projects/${id}`;
+    const errorDetail = apiRes.error || 'Server unreachable or returned non-JSON';
+    console.error('[LUXE DB ERROR] Failed to edit project on backend:', { targetUrl, apiRes });
     setServerOnline(false);
-    return { success: true, serverSynced: false, projects: updatedProjs };
+    return { success: false, error: `Could not update product in production database (${errorDetail}). Target: ${targetUrl}.` };
   };
 
   // Delete project
@@ -636,15 +628,14 @@ export const ProjectProvider = ({ children }) => {
       setProjects(apiRes.data.projects);
       localStorage.setItem('luxe_projects', JSON.stringify(apiRes.data.projects));
       setServerOnline(true);
-      return { success: true, serverSynced: true, projects: apiRes.data.projects };
+      return { success: true, message: `Product deleted from shared production database!`, projects: apiRes.data.projects };
     }
 
-    // Fallback: local delete
-    const updatedProjs = projects.filter(p => p.id !== id);
-    setProjects(updatedProjs);
-    localStorage.setItem('luxe_projects', JSON.stringify(updatedProjs));
+    const targetUrl = `${getApiBaseUrl()}/projects/${id}`;
+    const errorDetail = apiRes.error || 'Server unreachable or returned non-JSON';
+    console.error('[LUXE DB ERROR] Failed to delete project on backend:', { targetUrl, apiRes });
     setServerOnline(false);
-    return { success: true, serverSynced: false, projects: updatedProjs };
+    return { success: false, error: `Could not delete product from production database (${errorDetail}). Target: ${targetUrl}.` };
   };
 
   // Add new Customer Booking/Inquiry
